@@ -4,22 +4,28 @@ import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 
-import com.fleetflow.service.AuthService;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.ConfigurableApplicationContext;
+
+import com.fleetflow.controller.AuthController;
+import com.fleetflow.controller.MasterDataController;
 import com.fleetflow.ui.MainFrame;
 import com.fleetflow.ui.SessionContext;
 
-public final class FleetflowApplication {
-
-	private FleetflowApplication() {
-	}
+@SpringBootApplication
+public class FleetflowApplication {
 
 	public static void main(String[] args) {
-		SwingUtilities.invokeLater(FleetflowApplication::jalankan);
+		ConfigurableApplicationContext context = SpringApplication.run(FleetflowApplication.class, args);
+		context.registerShutdownHook();
+		SwingUtilities.invokeLater(() -> jalankan(context));
 	}
 
-	private static void jalankan() {
+	private static void jalankan(ConfigurableApplicationContext context) {
 		pakaiTampilanSistem();
-		MainFrame frame = new MainFrame(new AuthService(), new SessionContext());
+		MainFrame frame = new MainFrame(context.getBean(AuthController.class),
+				context.getBean(MasterDataController.class), new SessionContext());
 		frame.setVisible(true);
 	}
 

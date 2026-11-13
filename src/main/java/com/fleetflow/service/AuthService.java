@@ -18,15 +18,13 @@ import java.util.regex.Pattern;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
 import com.fleetflow.domain.Role;
 import com.fleetflow.domain.User;
 
-/**
- * Login dan registrasi akun.
- *
- * <p>Akun disimpan di satu file teks ({@code data/users.txt}), tanpa database.
- * Password di-hash memakai PBKDF2 dari JDK.
- */
+@Service
 public class AuthService {
 
 	private static final Pattern USERNAME_VALID = Pattern.compile("^[a-zA-Z0-9._]{3,30}$");
@@ -42,6 +40,7 @@ public class AuthService {
 	private final Map<String, Akun> akun = new LinkedHashMap<>();
 	private final SecureRandom random = new SecureRandom();
 
+	@Autowired
 	public AuthService() {
 		this(Path.of("data", "users.txt"));
 	}
@@ -51,9 +50,6 @@ public class AuthService {
 		muat();
 	}
 
-	/**
-	 * Validasi kredensial. Mengembalikan user jika username dan password cocok.
-	 */
 	public synchronized User login(String username, String password) {
 		if (username == null || username.isBlank() || password == null || password.isBlank()) {
 			throw new AuthException("Username dan password wajib diisi.");
@@ -66,9 +62,6 @@ public class AuthService {
 		return new User(data.username(), data.role());
 	}
 
-	/**
-	 * Pendaftaran akun baru dengan salah satu dari 3 role.
-	 */
 	public synchronized User register(String username, String password, String konfirmasiPassword, Role role) {
 		String userBaru = normalisasi(username);
 

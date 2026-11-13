@@ -13,24 +13,24 @@ import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 
+import com.fleetflow.controller.AuthController;
 import com.fleetflow.domain.User;
 import com.fleetflow.service.AuthException;
-import com.fleetflow.service.AuthService;
 
 public class LoginPanel extends JPanel {
 
 	private static final long serialVersionUID = 1L;
 
-	private final AuthService authService;
+	private final AuthController authController;
 	private final MainFrame frame;
 
 	private final JTextField username = new JTextField(16);
 	private final JPasswordField password = new JPasswordField(16);
 	private final JLabel pesan = new JLabel(" ");
 
-	public LoginPanel(AuthService authService, MainFrame frame, String flash) {
+	public LoginPanel(AuthController authController, MainFrame frame, String flash) {
 		super(new GridBagLayout());
-		this.authService = authService;
+		this.authController = authController;
 		this.frame = frame;
 
 		JPanel form = new JPanel(new GridBagLayout());
@@ -73,7 +73,7 @@ public class LoginPanel extends JPanel {
 
 	private void handleLogin() {
 		try {
-			User user = authService.login(username.getText(), new String(password.getPassword()));
+			User user = authController.login(username.getText(), new String(password.getPassword()));
 			frame.masuk(user);
 		}
 		catch (AuthException e) {

@@ -14,10 +14,10 @@ import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 
+import com.fleetflow.controller.AuthController;
 import com.fleetflow.domain.Role;
 import com.fleetflow.domain.User;
 import com.fleetflow.service.AuthException;
-import com.fleetflow.service.AuthService;
 
 /**
  * Form pendaftaran akun sederhana.
@@ -26,7 +26,7 @@ public class RegisterPanel extends JPanel {
 
 	private static final long serialVersionUID = 1L;
 
-	private final AuthService authService;
+	private final AuthController authController;
 	private final MainFrame frame;
 
 	private final JTextField username = new JTextField(16);
@@ -35,9 +35,9 @@ public class RegisterPanel extends JPanel {
 	private final JComboBox<Role> role = new JComboBox<>(Role.values());
 	private final JLabel pesan = new JLabel(" ");
 
-	public RegisterPanel(AuthService authService, MainFrame frame) {
+	public RegisterPanel(AuthController authController, MainFrame frame) {
 		super(new GridBagLayout());
-		this.authService = authService;
+		this.authController = authController;
 		this.frame = frame;
 
 		role.setSelectedItem(Role.OPERASIONAL);
@@ -75,7 +75,7 @@ public class RegisterPanel extends JPanel {
 
 	private void handleDaftar() {
 		try {
-			User user = authService.register(
+			User user = authController.register(
 					username.getText(),
 					new String(password.getPassword()),
 					new String(konfirmasi.getPassword()),

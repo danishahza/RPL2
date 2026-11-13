@@ -5,8 +5,9 @@ import java.awt.Dimension;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 
+import com.fleetflow.controller.AuthController;
+import com.fleetflow.controller.MasterDataController;
 import com.fleetflow.domain.User;
-import com.fleetflow.service.AuthService;
 
 /**
  * Jendela utama aplikasi. Isinya berganti antara login, registrasi, dan dashboard.
@@ -15,12 +16,14 @@ public class MainFrame extends JFrame {
 
 	private static final long serialVersionUID = 1L;
 
-	private final AuthService authService;
+	private final AuthController authController;
+	private final MasterDataController masterDataController;
 	private final SessionContext session;
 
-	public MainFrame(AuthService authService, SessionContext session) {
+	public MainFrame(AuthController authController, MasterDataController masterDataController, SessionContext session) {
 		super("FleetFlow");
-		this.authService = authService;
+		this.authController = authController;
+		this.masterDataController = masterDataController;
 		this.session = session;
 
 		setDefaultCloseOperation(EXIT_ON_CLOSE);
@@ -36,16 +39,16 @@ public class MainFrame extends JFrame {
 	}
 
 	public void tampilkanLogin(String pesan) {
-		tampilkan(new LoginPanel(authService, this, pesan));
+		tampilkan(new LoginPanel(authController, this, pesan));
 	}
 
 	public void tampilkanRegister() {
-		tampilkan(new RegisterPanel(authService, this));
+		tampilkan(new RegisterPanel(authController, this));
 	}
 
 	public void masuk(User user) {
 		session.login(user);
-		tampilkan(new DashboardPanel(session, this));
+		tampilkan(new DashboardPanel(session, this, masterDataController));
 	}
 
 	public void keluar() {

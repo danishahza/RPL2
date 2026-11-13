@@ -9,6 +9,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 
+import com.fleetflow.controller.MasterDataController;
 import com.fleetflow.domain.Rute;
 
 /**
@@ -20,7 +21,7 @@ public class RutePanel extends CrudPanel<Rute> {
 
 	private static final String[] KOLOM = { "ID", "Kota A", "Kota B", "Jarak (km)" };
 
-	public RutePanel(MasterData data) {
+	public RutePanel(MasterDataController data) {
 		super(data, "Rute", KOLOM);
 	}
 

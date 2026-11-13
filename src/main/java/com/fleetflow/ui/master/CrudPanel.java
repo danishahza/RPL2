@@ -9,6 +9,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 
+import com.fleetflow.controller.MasterDataController;
 import com.fleetflow.domain.Kota;
 import com.fleetflow.ui.TabelPanel;
 
@@ -21,10 +22,10 @@ public abstract class CrudPanel<T> extends JPanel {
 
 	private static final long serialVersionUID = 1L;
 
-	protected final MasterData data;
+	protected final MasterDataController data;
 	private final TabelPanel tabel;
 
-	protected CrudPanel(MasterData data, String judul, String[] kolom) {
+	protected CrudPanel(MasterDataController data, String judul, String[] kolom) {
 		super(new BorderLayout());
 		this.data = data;
 		this.tabel = new TabelPanel(judul, kolom, this::barisTampilan);

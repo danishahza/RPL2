@@ -9,6 +9,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 
+import com.fleetflow.controller.MasterDataController;
 import com.fleetflow.domain.Pelanggan;
 
 /**
@@ -20,7 +21,7 @@ public class PelangganPanel extends CrudPanel<Pelanggan> {
 
 	private static final String[] KOLOM = { "ID", "Nama", "Alamat", "Kota" };
 
-	public PelangganPanel(MasterData data) {
+	public PelangganPanel(MasterDataController data) {
 		super(data, "Pelanggan", KOLOM);
 	}
 

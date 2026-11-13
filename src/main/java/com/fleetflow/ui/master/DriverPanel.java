@@ -9,6 +9,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 
+import com.fleetflow.controller.MasterDataController;
 import com.fleetflow.domain.Driver;
 import com.fleetflow.domain.StatusDriver;
 
@@ -22,7 +23,7 @@ public class DriverPanel extends CrudPanel<Driver> {
 	private static final String[] KOLOM = { "ID", "Nama", "No. Telepon", "No. Fleet", "Kapasitas", "Status",
 			"Kota Saat Ini" };
 
-	public DriverPanel(MasterData data) {
+	public DriverPanel(MasterDataController data) {
 		super(data, "Driver", KOLOM);
 	}
 
