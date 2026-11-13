@@ -1,4 +1,7 @@
 package com.fleetflow.domain;
 
-public record Pelanggan(String id, String nama, String alamat, String telepon) {
+/**
+ * Pelanggan sesuai tabel {@code pelanggan} yang terhubung ke {@code kota}.
+ */
+public record Pelanggan(String id, String nama, String alamat, String kotaId) {
 }

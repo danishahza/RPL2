@@ -1,7 +1,7 @@
 package com.fleetflow.ui;
 
-import java.awt.Component;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
@@ -17,9 +17,6 @@ import com.fleetflow.domain.User;
 import com.fleetflow.service.AuthException;
 import com.fleetflow.service.AuthService;
 
-/**
- * Form login sederhana.
- */
 public class LoginPanel extends JPanel {
 
 	private static final long serialVersionUID = 1L;

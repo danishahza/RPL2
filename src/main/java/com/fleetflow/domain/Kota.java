@@ -1,4 +1,7 @@
 package com.fleetflow.domain;
 
-public record Kota(String id, String nama, String kodePos) {
+/**
+ * Kota sesuai tabel {@code kota}.
+ */
+public record Kota(String id, String nama) {
 }

@@ -5,9 +5,11 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.util.List;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
 import javax.swing.BorderFactory;
+import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -20,7 +22,7 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableRowSorter;
 
 /**
- * Tabel data sederhana dengan kolom pencarian.
+ * Tabel data dengan kolom pencarian dan tombol aksi opsional.
  */
 public class TabelPanel extends JPanel {
 
@@ -28,12 +30,17 @@ public class TabelPanel extends JPanel {
 
 	private final JTextField cari = new JTextField();
 	private final TableRowSorter<DefaultTableModel> sorter;
+	private final DefaultTableModel model;
+	private final JTable tabel;
+	private final Supplier<List<String[]>> sumber;
+	private final JPanel panelAksi = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
 
-	public TabelPanel(String judul, String[] kolom, List<String[]> baris) {
+	public TabelPanel(String judul, String[] kolom, Supplier<List<String[]>> sumber) {
 		super(new BorderLayout(0, 8));
+		this.sumber = sumber;
 		setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
 
-		DefaultTableModel model = new DefaultTableModel(kolom, 0) {
+		model = new DefaultTableModel(kolom, 0) {
 			private static final long serialVersionUID = 1L;
 
 			@Override
@@ -41,11 +48,8 @@ public class TabelPanel extends JPanel {
 				return false;
 			}
 		};
-		for (String[] isi : baris) {
-			model.addRow(isi);
-		}
 
-		JTable tabel = new JTable(model);
+		tabel = new JTable(model);
 		tabel.setRowHeight(22);
 		tabel.setFillsViewportHeight(true);
 		tabel.getTableHeader().setReorderingAllowed(false);
@@ -83,6 +87,39 @@ public class TabelPanel extends JPanel {
 
 		add(atas, BorderLayout.NORTH);
 		add(new JScrollPane(tabel), BorderLayout.CENTER);
+		add(panelAksi, BorderLayout.SOUTH);
+
+		refresh();
+	}
+
+	public TabelPanel(String judul, String[] kolom, List<String[]> baris) {
+		this(judul, kolom, () -> baris);
+	}
+
+	public void tambahTombol(JButton tombol) {
+		panelAksi.add(tombol);
+	}
+
+	/**
+	 * Memuat ulang isi tabel dari sumber data.
+	 */
+	public void refresh() {
+		model.setRowCount(0);
+		for (String[] baris : sumber.get()) {
+			model.addRow(baris);
+		}
+	}
+
+	/**
+	 * ID pada kolom pertama dari baris yang dipilih, atau {@code null} jika belum ada.
+	 */
+	public String idTerpilih() {
+		int barisTampilan = tabel.getSelectedRow();
+		if (barisTampilan < 0) {
+			return null;
+		}
+		int barisModel = tabel.convertRowIndexToModel(barisTampilan);
+		return (String) model.getValueAt(barisModel, 0);
 	}
 
 	private void saring() {

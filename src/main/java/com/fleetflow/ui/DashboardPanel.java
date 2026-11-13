@@ -24,7 +24,12 @@ import javax.swing.SwingConstants;
 
 import com.fleetflow.domain.Role;
 import com.fleetflow.domain.User;
+import com.fleetflow.ui.master.DriverPanel;
+import com.fleetflow.ui.master.KotaPanel;
 import com.fleetflow.ui.master.MasterData;
+import com.fleetflow.ui.master.PelangganPanel;
+import com.fleetflow.ui.master.ProdukPanel;
+import com.fleetflow.ui.master.RutePanel;
 
 /**
  * Halaman utama setelah login: header, menu sesuai role, dan isi menu.
@@ -37,6 +42,7 @@ public class DashboardPanel extends JPanel {
 	private final User user;
 	private final JPanel isi = new JPanel(new CardLayout());
 	private final Map<String, JToggleButton> menu = new LinkedHashMap<>();
+	private final MasterData masterData = new MasterData();
 
 	public DashboardPanel(SessionContext session, MainFrame frame) {
 		super(new BorderLayout());
@@ -60,12 +66,11 @@ public class DashboardPanel extends JPanel {
 
 		switch (user.role()) {
 			case ADMIN -> {
-				tambahKartu("Driver", new TabelPanel("Driver", MasterData.KOLOM_DRIVER, MasterData.BARIS_DRIVER));
-				tambahKartu("Kota", new TabelPanel("Kota", MasterData.KOLOM_KOTA, MasterData.BARIS_KOTA));
-				tambahKartu("Pelanggan",
-						new TabelPanel("Pelanggan", MasterData.KOLOM_PELANGGAN, MasterData.BARIS_PELANGGAN));
-				tambahKartu("Produk", new TabelPanel("Produk", MasterData.KOLOM_PRODUK, MasterData.BARIS_PRODUK));
-				tambahKartu("Rute", new TabelPanel("Rute", MasterData.KOLOM_RUTE, MasterData.BARIS_RUTE));
+				tambahKartu("Driver", new DriverPanel(masterData));
+				tambahKartu("Kota", new KotaPanel(masterData));
+				tambahKartu("Pelanggan", new PelangganPanel(masterData));
+				tambahKartu("Produk", new ProdukPanel(masterData));
+				tambahKartu("Rute", new RutePanel(masterData));
 			}
 			case OPERASIONAL -> tambahKartu("Delivery Order", buatHalamanKosong("Belum ada data delivery order."));
 			case DISPATCHER -> tambahKartu("Penugasan", buatHalamanKosong("Belum ada data penugasan."));
