@@ -7,17 +7,6 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
-/**
- * Driver sesuai tabel {@code driver}.
- *
- * <p>{@code kotaSaatIniId} adalah posisi truk saat ini. Saat driver di-dispatch,
- * nilai ini dan {@code status} akan diperbarui.
- *
- * <p>Berat muatan tidak disimpan di sini maupun di produk, melainkan per
- * delivery order yang diinput oleh role operasional.
- *
- * <p>Kelas ini dipetakan Hibernate ke tabel {@code driver}.
- */
 @Entity
 @Table(name = "driver")
 public class Driver {
@@ -45,7 +34,6 @@ public class Driver {
 	@Column(name = "kota_saat_ini_id", nullable = false, length = 10)
 	private String kotaSaatIniId;
 
-	/** Konstruktor tanpa argumen yang dibutuhkan Hibernate. */
 	protected Driver() {
 	}
 
@@ -86,6 +74,10 @@ public class Driver {
 
 	public String kotaSaatIniId() {
 		return kotaSaatIniId;
+	}
+
+	public Driver denganStatus(StatusDriver statusBaru) {
+		return new Driver(id, nama, noTelepon, nomorFleet, kapasitasTon, statusBaru, kotaSaatIniId);
 	}
 
 	@Override

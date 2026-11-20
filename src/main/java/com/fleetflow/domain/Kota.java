@@ -5,12 +5,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
-/**
- * Kota sesuai tabel {@code kota}.
- *
- * <p>Kelas ini dipetakan Hibernate ke tabel {@code kota}. Accessor tetap
- * {@code id()} dan {@code nama()} supaya pemakaian di UI tidak berubah.
- */
 @Entity
 @Table(name = "kota")
 public class Kota {
@@ -22,7 +16,6 @@ public class Kota {
 	@Column(name = "nama", nullable = false, length = 100)
 	private String nama;
 
-	/** Konstruktor tanpa argumen yang dibutuhkan Hibernate. */
 	protected Kota() {
 	}
 

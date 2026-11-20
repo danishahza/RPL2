@@ -1,11 +1,15 @@
 package com.fleetflow.domain;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 
 @Entity
 @Table(name = "delivery_order")
@@ -39,18 +43,22 @@ public class DeliveryOrder {
 	@Column(name = "tanggal_tenggat", nullable = false)
 	private LocalDate tanggalTenggat;
 
-	@Column(name = "produk_id", nullable = false, length = 10)
-	private String produkId;
+	@Enumerated(EnumType.STRING)
+	@Column(name = "status", nullable = false, length = 20, columnDefinition = "varchar(20) default 'CREATED'")
+	private StatusDeliveryOrder status;
 
-	@Column(name = "berat_ton", nullable = false)
-	private double beratTon;
+	@Column(name = "driver_id", length = 10)
+	private String driverId;
+
+	@Transient
+	private List<DeliveryOrderItem> items = List.of();
 
 	protected DeliveryOrder() {
 	}
 
 	public DeliveryOrder(String id, String nomorDo, String kotaAsalId, String pengirimId, String kotaTujuanId,
 			String penerimaId, LocalDate tanggalDo, LocalDate tanggalPickup, LocalDate tanggalTenggat,
-			String produkId, double beratTon) {
+			StatusDeliveryOrder status, String driverId) {
 		this.id = id;
 		this.nomorDo = nomorDo;
 		this.kotaAsalId = kotaAsalId;
@@ -60,8 +68,8 @@ public class DeliveryOrder {
 		this.tanggalDo = tanggalDo;
 		this.tanggalPickup = tanggalPickup;
 		this.tanggalTenggat = tanggalTenggat;
-		this.produkId = produkId;
-		this.beratTon = beratTon;
+		this.status = status;
+		this.driverId = driverId;
 	}
 
 	public String id() {
@@ -100,12 +108,40 @@ public class DeliveryOrder {
 		return tanggalTenggat;
 	}
 
-	public String produkId() {
-		return produkId;
+	public StatusDeliveryOrder status() {
+		return status;
 	}
 
-	public double beratTon() {
-		return beratTon;
+	public String driverId() {
+		return driverId;
+	}
+
+	public List<DeliveryOrderItem> items() {
+		return items;
+	}
+
+	public void tetapkanItems(List<DeliveryOrderItem> items) {
+		this.items = items == null ? List.of() : List.copyOf(items);
+	}
+
+	public double totalBeratTon() {
+		return items.stream().mapToDouble(DeliveryOrderItem::beratTon).sum();
+	}
+
+	public DeliveryOrder denganPenugasan(String driverIdBaru, StatusDeliveryOrder statusBaru) {
+		DeliveryOrder hasil = new DeliveryOrder(id, nomorDo, kotaAsalId, pengirimId, kotaTujuanId, penerimaId,
+				tanggalDo, tanggalPickup, tanggalTenggat, statusBaru, driverIdBaru);
+		hasil.tetapkanItems(items);
+		return hasil;
+	}
+
+	public DeliveryOrder denganData(String kotaAsalIdBaru, String pengirimIdBaru, String kotaTujuanIdBaru,
+			String penerimaIdBaru, LocalDate tanggalDoBaru, LocalDate tanggalPickupBaru,
+			LocalDate tanggalTenggatBaru) {
+		DeliveryOrder hasil = new DeliveryOrder(id, nomorDo, kotaAsalIdBaru, pengirimIdBaru, kotaTujuanIdBaru,
+				penerimaIdBaru, tanggalDoBaru, tanggalPickupBaru, tanggalTenggatBaru, status, driverId);
+		hasil.tetapkanItems(items);
+		return hasil;
 	}
 
 	@Override

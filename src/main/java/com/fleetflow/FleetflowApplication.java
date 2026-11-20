@@ -17,7 +17,10 @@ import com.fleetflow.ui.SessionContext;
 public class FleetflowApplication {
 
 	public static void main(String[] args) {
-		ConfigurableApplicationContext context = SpringApplication.run(FleetflowApplication.class, args);
+		SpringApplication aplikasi = new SpringApplication(FleetflowApplication.class);
+		// Spring Boot menyalakan mode headless secara bawaan; aplikasi desktop ini butuh Swing.
+		aplikasi.setHeadless(false);
+		ConfigurableApplicationContext context = aplikasi.run(args);
 		context.registerShutdownHook();
 		SwingUtilities.invokeLater(() -> jalankan(context));
 	}
@@ -34,7 +37,6 @@ public class FleetflowApplication {
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
 		}
 		catch (ReflectiveOperationException | UnsupportedLookAndFeelException e) {
-			// Tampilan bawaan Java tetap dipakai.
 		}
 	}
 

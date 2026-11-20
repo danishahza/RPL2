@@ -31,6 +31,7 @@ import com.fleetflow.ui.master.PelangganPanel;
 import com.fleetflow.ui.master.ProdukPanel;
 import com.fleetflow.ui.master.RutePanel;
 import com.fleetflow.ui.operasional.DeliveryOrderPanel;
+import com.fleetflow.ui.operasional.DispatchPanel;
 
 /**
  * Halaman utama setelah login: header, menu sesuai role, dan isi menu.
@@ -75,7 +76,7 @@ public class DashboardPanel extends JPanel {
 				tambahKartu("Rute", new RutePanel(masterData));
 			}
 			case OPERASIONAL -> tambahKartu("Delivery Order", new DeliveryOrderPanel(masterData));
-			case DISPATCHER -> tambahKartu("Penugasan", buatHalamanKosong("Belum ada data penugasan."));
+			case DISPATCHER -> tambahKartu("Penugasan", new DispatchPanel(masterData));
 		}
 	}
 

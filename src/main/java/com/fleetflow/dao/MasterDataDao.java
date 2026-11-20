@@ -1,21 +1,26 @@
 package com.fleetflow.dao;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Repository;
 
 import com.fleetflow.domain.DeliveryOrder;
+import com.fleetflow.domain.DeliveryOrderItem;
 import com.fleetflow.domain.Driver;
 import com.fleetflow.domain.Kota;
 import com.fleetflow.domain.Pelanggan;
 import com.fleetflow.domain.Produk;
 import com.fleetflow.domain.Rute;
+import com.fleetflow.domain.StatusDeliveryOrder;
 import com.fleetflow.domain.StatusDriver;
 
 import jakarta.persistence.EntityManager;
@@ -32,6 +37,9 @@ public class MasterDataDao {
 	}
 
 	private void siapkanDataAwal(EntityManager em) {
+		migrasiStatusDriverLama(em);
+		migrasiKolomDeliveryOrderLama(em);
+
 		if (em.createQuery("select count(k) from Kota k", Long.class).getSingleResult() > 0) {
 			return;
 		}
@@ -51,10 +59,10 @@ public class MasterDataDao {
 		Map<String, String> idKota = daftarKota.stream().collect(Collectors.toMap(Kota::nama, Kota::id));
 
 		List.of(
-				new Driver("1", "Budi Santoso", "081200000001", "FL-001", 60, StatusDriver.TERSEDIA, idKota.get("Jakarta")),
-				new Driver("2", "Andi Pratama", "081200000002", "FL-002", 60, StatusDriver.TERSEDIA, idKota.get("Jakarta")),
-				new Driver("3", "Joko Susilo", "081200000003", "FL-003", 60, StatusDriver.TERSEDIA, idKota.get("Cilegon")),
-				new Driver("4", "Rudi Hartono", "081200000004", "FL-004", 60, StatusDriver.TERSEDIA, idKota.get("Surabaya")))
+				new Driver("1", "Budi Santoso", "081200000001", "FL-001", 60, StatusDriver.AVAILABLE, idKota.get("Jakarta")),
+				new Driver("2", "Andi Pratama", "081200000002", "FL-002", 60, StatusDriver.AVAILABLE, idKota.get("Jakarta")),
+				new Driver("3", "Joko Susilo", "081200000003", "FL-003", 60, StatusDriver.AVAILABLE, idKota.get("Cilegon")),
+				new Driver("4", "Rudi Hartono", "081200000004", "FL-004", 60, StatusDriver.AVAILABLE, idKota.get("Surabaya")))
 				.forEach(em::persist);
 
 		List.of(
@@ -129,6 +137,69 @@ public class MasterDataDao {
 		return new Rute(id, idKota.get(kotaA), idKota.get(kotaB), jarakKm);
 	}
 
+	/** Menyelaraskan status driver lama dengan label status yang baru. */
+	private static void migrasiStatusDriverLama(EntityManager em) {
+		Number jumlahLama = (Number) em.createNativeQuery(
+				"select count(*) from driver where status in ('TERSEDIA', 'PENJEMPUTAN', 'PENGANTARAN')")
+				.getSingleResult();
+		if (jumlahLama.intValue() == 0) {
+			return;
+		}
+
+		// Constraint lama hanya mengizinkan status berbahasa Indonesia, sehingga
+		// harus dilepas sebelum data lama diperbarui.
+		hapusConstraintStatusDriver(em);
+		em.createNativeQuery("update driver set status = 'AVAILABLE' where status = 'TERSEDIA'").executeUpdate();
+		em.createNativeQuery("update driver set status = 'ASSIGNED' where status = 'PENJEMPUTAN'").executeUpdate();
+		em.createNativeQuery("update driver set status = 'IN_TRANSIT' where status = 'PENGANTARAN'").executeUpdate();
+		em.createNativeQuery("""
+				alter table driver add constraint driver_status_check
+				check (status in ('AVAILABLE', 'ASSIGNED', 'IN_TRANSIT'))
+				""").executeUpdate();
+	}
+
+	/** Melepas check constraint pada kolom status driver, apa pun nama constraint-nya. */
+	private static void hapusConstraintStatusDriver(EntityManager em) {
+		List<?> namaConstraint = em.createNativeQuery("""
+				select conname from pg_constraint
+				where conrelid = 'driver'::regclass
+				  and contype = 'c'
+				  and pg_get_constraintdef(oid) ilike '%status%'
+				""").getResultList();
+		for (Object nama : namaConstraint) {
+			String identifier = String.valueOf(nama).replace("\"", "\"\"");
+			em.createNativeQuery("alter table driver drop constraint \"" + identifier + "\"").executeUpdate();
+		}
+	}
+
+	/**
+	 * Memindahkan produk dan berat pada tabel delivery_order lama ke tabel item,
+	 * lalu menghapus kolom lama agar delivery order baru bisa menyimpan banyak produk.
+	 */
+	private static void migrasiKolomDeliveryOrderLama(EntityManager em) {
+		if (!kolomAda(em, "delivery_order", "produk_id")) {
+			return;
+		}
+		em.createNativeQuery("""
+				insert into delivery_order_item (id, delivery_order_id, produk_id, berat_ton)
+				select 'L' || d.id, d.id, d.produk_id, d.berat_ton
+				from delivery_order d
+				where d.produk_id is not null
+				  and not exists (select 1 from delivery_order_item i where i.delivery_order_id = d.id)
+				""").executeUpdate();
+		em.createNativeQuery("alter table delivery_order drop column produk_id").executeUpdate();
+		em.createNativeQuery("alter table delivery_order drop column berat_ton").executeUpdate();
+	}
+
+	private static boolean kolomAda(EntityManager em, String tabel, String kolom) {
+		Number jumlah = (Number) em.createNativeQuery(
+				"select count(*) from information_schema.columns where table_name = :tabel and column_name = :kolom")
+				.setParameter("tabel", tabel)
+				.setParameter("kolom", kolom)
+				.getSingleResult();
+		return jumlah.intValue() > 0;
+	}
+
 	public List<Kota> kota() {
 		return urut(database.baca(em -> em.createQuery("select k from Kota k", Kota.class).getResultList()), Kota::id);
 	}
@@ -174,6 +245,22 @@ public class MasterDataDao {
 		}
 		Produk produk = database.baca(em -> em.find(Produk.class, id));
 		return produk == null ? "-" : produk.nama();
+	}
+
+	public String namaDriver(String id) {
+		if (id == null) {
+			return "-";
+		}
+		Driver driver = database.baca(em -> em.find(Driver.class, id));
+		return driver == null ? "-" : driver.nama();
+	}
+
+	public String alamatPelanggan(String id) {
+		if (id == null) {
+			return "-";
+		}
+		Pelanggan pelanggan = database.baca(em -> em.find(Pelanggan.class, id));
+		return pelanggan == null ? "-" : pelanggan.alamat();
 	}
 
 	// ----- Kota -----
@@ -310,37 +397,172 @@ public class MasterDataDao {
 
 	// ----- Delivery Order -----
 
+	/** Semua delivery order, termasuk yang sudah selesai (untuk riwayat). */
 	public List<DeliveryOrder> deliveryOrder() {
-		return urut(database.baca(em -> em.createQuery("select d from DeliveryOrder d", DeliveryOrder.class)
-				.getResultList()), DeliveryOrder::id);
+		List<DeliveryOrder> daftar = urut(database.baca(em -> em.createQuery("select d from DeliveryOrder d",
+				DeliveryOrder.class).getResultList()), DeliveryOrder::id);
+		return isiItems(daftar);
 	}
 
-	public void tambahDeliveryOrder(String kotaAsalId, String pengirimId, String kotaTujuanId, String penerimaId,
-			LocalDate tanggalDo, LocalDate tanggalPickup, LocalDate tanggalTenggat, String produkId,
-			double beratTon) {
+	/**
+	 * Delivery order yang masih aktif: Created, Assigned, In Transit, dan Delivered.
+	 * DO baru keluar dari daftar aktif setelah diselesaikan oleh operasional.
+	 */
+	public List<DeliveryOrder> deliveryOrderAktif() {
+		List<DeliveryOrder> daftar = urut(database.baca(em -> em.createQuery(
+				"select d from DeliveryOrder d where d.status <> :selesai", DeliveryOrder.class)
+				.setParameter("selesai", StatusDeliveryOrder.COMPLETED)
+				.getResultList()), DeliveryOrder::id);
+		return isiItems(daftar);
+	}
+
+	public void tambahDeliveryOrder(DeliveryOrder dataBaru) {
+		if (dataBaru.tanggalDo() == null) {
+			throw new IllegalArgumentException("Tanggal pembuatan DO wajib diisi.");
+		}
 		database.dalamTransaksi(em -> {
 			String id = idBerikut(em, "select d.id from DeliveryOrder d");
-			DeliveryOrder baru = new DeliveryOrder(id, String.format("DO-%04d", angkaId(id)), kotaAsalId, pengirimId,
-					kotaTujuanId, penerimaId, tanggalDo, tanggalPickup, tanggalTenggat, produkId, beratTon);
+			DeliveryOrder baru = new DeliveryOrder(id, nomorDoBerikut(em, dataBaru.tanggalDo()),
+					dataBaru.kotaAsalId(), dataBaru.pengirimId(), dataBaru.kotaTujuanId(), dataBaru.penerimaId(),
+					dataBaru.tanggalDo(), dataBaru.tanggalPickup(), dataBaru.tanggalTenggat(),
+					StatusDeliveryOrder.CREATED, null);
+			baru.tetapkanItems(dataBaru.items());
 			validasiDeliveryOrder(em, baru);
 			em.persist(baru);
+			simpanItems(em, baru);
 		});
 	}
 
-	public void ubahDeliveryOrder(String id, String kotaAsalId, String pengirimId, String kotaTujuanId,
-			String penerimaId, LocalDate tanggalDo, LocalDate tanggalPickup, LocalDate tanggalTenggat,
-			String produkId, double beratTon) {
+	public void ubahDeliveryOrder(DeliveryOrder dataBaru) {
 		database.dalamTransaksi(em -> {
-			DeliveryOrder lama = cariDeliveryOrder(em, id);
-			DeliveryOrder baru = new DeliveryOrder(lama.id(), lama.nomorDo(), kotaAsalId, pengirimId, kotaTujuanId,
-					penerimaId, tanggalDo, tanggalPickup, tanggalTenggat, produkId, beratTon);
+			DeliveryOrder lama = cariDeliveryOrder(em, dataBaru.id());
+			DeliveryOrder baru = lama.denganData(dataBaru.kotaAsalId(), dataBaru.pengirimId(),
+					dataBaru.kotaTujuanId(), dataBaru.penerimaId(), dataBaru.tanggalDo(), dataBaru.tanggalPickup(),
+					dataBaru.tanggalTenggat());
+			baru.tetapkanItems(dataBaru.items());
 			validasiDeliveryOrder(em, baru);
 			em.merge(baru);
+			em.createQuery("delete from DeliveryOrderItem i where i.deliveryOrderId = :id")
+					.setParameter("id", baru.id())
+					.executeUpdate();
+			simpanItems(em, baru);
 		});
 	}
 
 	public void hapusDeliveryOrder(String id) {
-		database.dalamTransaksi(em -> em.remove(cariDeliveryOrder(em, id)));
+		database.dalamTransaksi(em -> {
+			DeliveryOrder deliveryOrder = cariDeliveryOrder(em, id);
+			em.createQuery("delete from DeliveryOrderItem i where i.deliveryOrderId = :id")
+					.setParameter("id", id)
+					.executeUpdate();
+			em.remove(deliveryOrder);
+		});
+	}
+
+	// ----- Dispatch dan sinkronisasi status -----
+
+	/** Menugaskan driver: DO menjadi Assigned dan driver menjadi Assigned. */
+	public void tugaskanDriver(String deliveryOrderId, String driverId) {
+		database.dalamTransaksi(em -> {
+			DeliveryOrder deliveryOrder = cariDeliveryOrder(em, deliveryOrderId);
+			if (deliveryOrder.status() != StatusDeliveryOrder.CREATED) {
+				throw new IllegalArgumentException("Driver hanya dapat ditugaskan pada DO berstatus Created.");
+			}
+			Driver driver = cariDriver(em, driverId);
+			if (driver.status() != StatusDriver.AVAILABLE) {
+				throw new IllegalArgumentException(
+						"Driver " + driver.nama() + " sedang tidak tersedia (status " + driver.status().getLabel() + ").");
+			}
+			em.merge(deliveryOrder.denganPenugasan(driverId, StatusDeliveryOrder.ASSIGNED));
+			em.merge(driver.denganStatus(StatusDriver.ASSIGNED));
+		});
+	}
+
+	/** Driver mulai perjalanan: DO dan driver menjadi In Transit. */
+	public void mulaiPerjalanan(String deliveryOrderId) {
+		database.dalamTransaksi(em -> {
+			DeliveryOrder deliveryOrder = cariDeliveryOrder(em, deliveryOrderId);
+			if (deliveryOrder.status() != StatusDeliveryOrder.ASSIGNED) {
+				throw new IllegalArgumentException(
+						"Perjalanan hanya dapat dimulai pada DO berstatus Assigned.");
+			}
+			Driver driver = cariDriver(em, deliveryOrder.driverId());
+			em.merge(deliveryOrder.denganPenugasan(deliveryOrder.driverId(), StatusDeliveryOrder.IN_TRANSIT));
+			em.merge(driver.denganStatus(StatusDriver.IN_TRANSIT));
+		});
+	}
+
+	/** Pengiriman selesai: DO menjadi Delivered dan driver kembali Available. */
+	public void selesaikanPengiriman(String deliveryOrderId) {
+		database.dalamTransaksi(em -> {
+			DeliveryOrder deliveryOrder = cariDeliveryOrder(em, deliveryOrderId);
+			if (deliveryOrder.status() != StatusDeliveryOrder.IN_TRANSIT) {
+				throw new IllegalArgumentException(
+						"Pengiriman hanya dapat diselesaikan pada DO berstatus In Transit.");
+			}
+			Driver driver = cariDriver(em, deliveryOrder.driverId());
+			em.merge(deliveryOrder.denganPenugasan(deliveryOrder.driverId(), StatusDeliveryOrder.DELIVERED));
+			em.merge(driver.denganStatus(StatusDriver.AVAILABLE));
+		});
+	}
+
+	/**
+	 * Operasional menutup DO yang sudah selesai diantar dispatcher: DO menjadi
+	 * Completed dan tidak lagi tampil pada daftar DO aktif.
+	 */
+	public void selesaikanDeliveryOrder(String deliveryOrderId) {
+		database.dalamTransaksi(em -> {
+			DeliveryOrder deliveryOrder = cariDeliveryOrder(em, deliveryOrderId);
+			if (deliveryOrder.status() != StatusDeliveryOrder.DELIVERED) {
+				throw new IllegalArgumentException(
+						"DO hanya dapat diselesaikan oleh operasional setelah dispatcher menyelesaikan pengiriman.");
+			}
+			em.merge(deliveryOrder.denganPenugasan(deliveryOrder.driverId(), StatusDeliveryOrder.COMPLETED));
+		});
+	}
+
+	private List<DeliveryOrder> isiItems(List<DeliveryOrder> daftar) {
+		if (daftar.isEmpty()) {
+			return daftar;
+		}
+		List<DeliveryOrderItem> semuaItem = urut(database.baca(
+				em -> em.createQuery("select i from DeliveryOrderItem i", DeliveryOrderItem.class).getResultList()),
+				DeliveryOrderItem::id);
+		Map<String, List<DeliveryOrderItem>> itemPerDo = semuaItem.stream()
+				.collect(Collectors.groupingBy(DeliveryOrderItem::deliveryOrderId));
+		for (DeliveryOrder deliveryOrder : daftar) {
+			deliveryOrder.tetapkanItems(itemPerDo.getOrDefault(deliveryOrder.id(), List.of()));
+		}
+		return daftar;
+	}
+
+	private static void simpanItems(EntityManager em, DeliveryOrder deliveryOrder) {
+		int id = angkaId(idBerikut(em, "select i.id from DeliveryOrderItem i"));
+		for (DeliveryOrderItem item : deliveryOrder.items()) {
+			em.persist(new DeliveryOrderItem(String.valueOf(id++), deliveryOrder.id(), item.produkId(),
+					item.beratTon()));
+		}
+	}
+
+	/** Nomor DO mengikuti tanggal pembuatan, contoh 202611190001. */
+	private static String nomorDoBerikut(EntityManager em, LocalDate tanggalDo) {
+		String prefix = tanggalDo.format(DateTimeFormatter.BASIC_ISO_DATE);
+		int berikutnya = 1;
+		for (String nomor : em.createQuery(
+				"select d.nomorDo from DeliveryOrder d where d.nomorDo like :prefix", String.class)
+				.setParameter("prefix", prefix + "%")
+				.getResultList()) {
+			if (nomor.length() > prefix.length()) {
+				try {
+					berikutnya = Math.max(berikutnya,
+							Integer.parseInt(nomor.substring(prefix.length())) + 1);
+				}
+				catch (NumberFormatException e) {
+					// Nomor lama dengan format berbeda diabaikan.
+				}
+			}
+		}
+		return prefix + String.format("%04d", berikutnya);
 	}
 
 	// ----- Validasi dan util -----
@@ -405,27 +627,47 @@ public class MasterDataDao {
 			throw new IllegalArgumentException("Penerima harus perusahaan yang berada di kota tujuan.");
 		}
 
-		if (deliveryOrder.produkId() == null || em.find(Produk.class, deliveryOrder.produkId()) == null) {
-			throw new IllegalArgumentException("Produk wajib dipilih.");
+		if (deliveryOrder.status() == null) {
+			throw new IllegalArgumentException("Status delivery order wajib diisi.");
 		}
-		if (!Double.isFinite(deliveryOrder.beratTon()) || deliveryOrder.beratTon() <= 0) {
-			throw new IllegalArgumentException("Berat muatan harus lebih dari 0 ton.");
+		if (deliveryOrder.driverId() != null && em.find(Driver.class, deliveryOrder.driverId()) == null) {
+			throw new IllegalArgumentException("Driver yang ditugaskan tidak ditemukan.");
 		}
+		validasiItems(em, deliveryOrder);
 
 		if (deliveryOrder.tanggalDo() == null) {
 			throw new IllegalArgumentException("Tanggal pembuatan DO wajib diisi.");
 		}
 		if (deliveryOrder.tanggalPickup() == null) {
-			throw new IllegalArgumentException("Jadwal pickup wajib diisi.");
+			throw new IllegalArgumentException("Tanggal loading wajib diisi.");
 		}
 		if (deliveryOrder.tanggalTenggat() == null) {
-			throw new IllegalArgumentException("Tanggal tenggat waktu pengiriman wajib diisi.");
+			throw new IllegalArgumentException("Tenggat pengiriman wajib diisi.");
 		}
 		if (deliveryOrder.tanggalPickup().isBefore(deliveryOrder.tanggalDo())) {
-			throw new IllegalArgumentException("Jadwal pickup tidak boleh sebelum tanggal pembuatan DO.");
+			throw new IllegalArgumentException("Tanggal loading tidak boleh sebelum tanggal pembuatan DO.");
 		}
 		if (deliveryOrder.tanggalTenggat().isBefore(deliveryOrder.tanggalPickup())) {
-			throw new IllegalArgumentException("Tenggat waktu pengiriman tidak boleh sebelum jadwal pickup.");
+			throw new IllegalArgumentException("Tenggat pengiriman tidak boleh sebelum tanggal loading.");
+		}
+	}
+
+	private void validasiItems(EntityManager em, DeliveryOrder deliveryOrder) {
+		if (deliveryOrder.items().isEmpty()) {
+			throw new IllegalArgumentException("Minimal satu produk harus diisi.");
+		}
+		Set<String> produkDipakai = new HashSet<>();
+		for (DeliveryOrderItem item : deliveryOrder.items()) {
+			if (item.produkId() == null || em.find(Produk.class, item.produkId()) == null) {
+				throw new IllegalArgumentException("Produk wajib dipilih.");
+			}
+			if (!produkDipakai.add(item.produkId())) {
+				throw new IllegalArgumentException(
+						"Produk yang sama tidak boleh dipilih lebih dari sekali dalam satu DO.");
+			}
+			if (!Double.isFinite(item.beratTon()) || item.beratTon() <= 0) {
+				throw new IllegalArgumentException("Berat setiap produk harus lebih dari 0 ton.");
+			}
 		}
 	}
 

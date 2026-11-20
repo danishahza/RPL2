@@ -4,6 +4,8 @@ import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.List;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
@@ -98,6 +100,20 @@ public class TabelPanel extends JPanel {
 
 	public void tambahTombol(JButton tombol) {
 		panelAksi.add(tombol);
+	}
+
+	/**
+	 * Menjalankan aksi ketika sebuah baris diklik dua kali.
+	 */
+	public void saatBarisDiklik(Runnable aksi) {
+		tabel.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				if (e.getClickCount() == 2 && tabel.getSelectedRow() >= 0) {
+					aksi.run();
+				}
+			}
+		});
 	}
 
 	/**

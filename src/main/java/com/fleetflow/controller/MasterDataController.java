@@ -1,6 +1,6 @@
 package com.fleetflow.controller;
 
-import java.time.LocalDate;
+import java.io.File;
 import java.util.List;
 
 import org.springframework.stereotype.Controller;
@@ -12,6 +12,7 @@ import com.fleetflow.domain.Pelanggan;
 import com.fleetflow.domain.Produk;
 import com.fleetflow.domain.Rute;
 import com.fleetflow.domain.StatusDriver;
+import com.fleetflow.reports.DeliveryOrderInvoiceReport;
 import com.fleetflow.service.MasterDataService;
 
 @Controller
@@ -19,8 +20,11 @@ public class MasterDataController {
 
 	private final MasterDataService service;
 
-	public MasterDataController(MasterDataService service) {
+	private final DeliveryOrderInvoiceReport invoiceReport;
+
+	public MasterDataController(MasterDataService service, DeliveryOrderInvoiceReport invoiceReport) {
 		this.service = service;
+		this.invoiceReport = invoiceReport;
 	}
 
 	public List<Kota> kota() {
@@ -53,6 +57,14 @@ public class MasterDataController {
 
 	public String namaProduk(String id) {
 		return service.namaProduk(id);
+	}
+
+	public String namaDriver(String id) {
+		return service.namaDriver(id);
+	}
+
+	public String alamatPelanggan(String id) {
+		return service.alamatPelanggan(id);
 	}
 
 	public void tambahKota(String nama) {
@@ -121,21 +133,40 @@ public class MasterDataController {
 		return service.deliveryOrder();
 	}
 
-	public void tambahDeliveryOrder(String kotaAsalId, String pengirimId, String kotaTujuanId, String penerimaId,
-			LocalDate tanggalDo, LocalDate tanggalPickup, LocalDate tanggalTenggat, String produkId,
-			double beratTon) {
-		service.tambahDeliveryOrder(kotaAsalId, pengirimId, kotaTujuanId, penerimaId, tanggalDo, tanggalPickup,
-				tanggalTenggat, produkId, beratTon);
+	public List<DeliveryOrder> deliveryOrderAktif() {
+		return service.deliveryOrderAktif();
 	}
 
-	public void ubahDeliveryOrder(String id, String kotaAsalId, String pengirimId, String kotaTujuanId,
-			String penerimaId, LocalDate tanggalDo, LocalDate tanggalPickup, LocalDate tanggalTenggat,
-			String produkId, double beratTon) {
-		service.ubahDeliveryOrder(id, kotaAsalId, pengirimId, kotaTujuanId, penerimaId, tanggalDo, tanggalPickup,
-				tanggalTenggat, produkId, beratTon);
+	public void tambahDeliveryOrder(DeliveryOrder deliveryOrder) {
+		service.tambahDeliveryOrder(deliveryOrder);
+	}
+
+	public void ubahDeliveryOrder(DeliveryOrder deliveryOrder) {
+		service.ubahDeliveryOrder(deliveryOrder);
 	}
 
 	public void hapusDeliveryOrder(String id) {
 		service.hapusDeliveryOrder(id);
+	}
+
+	public void tugaskanDriver(String deliveryOrderId, String driverId) {
+		service.tugaskanDriver(deliveryOrderId, driverId);
+	}
+
+	public void mulaiPerjalanan(String deliveryOrderId) {
+		service.mulaiPerjalanan(deliveryOrderId);
+	}
+
+	public void selesaikanPengiriman(String deliveryOrderId) {
+		service.selesaikanPengiriman(deliveryOrderId);
+	}
+
+	public void selesaikanDeliveryOrder(String deliveryOrderId) {
+		service.selesaikanDeliveryOrder(deliveryOrderId);
+	}
+
+	/** Mencetak invoice DO ke berkas PDF melalui template JasperReports. */
+	public void cetakInvoiceDeliveryOrder(DeliveryOrder deliveryOrder, File tujuan) {
+		invoiceReport.simpanPdf(deliveryOrder, tujuan);
 	}
 }

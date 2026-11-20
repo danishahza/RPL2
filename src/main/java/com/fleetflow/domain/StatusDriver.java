@@ -1,13 +1,10 @@
 package com.fleetflow.domain;
 
-/**
- * Status driver saat ini (kolom {@code status} pada tabel {@code driver}).
- */
 public enum StatusDriver {
 
-	TERSEDIA("Tersedia"),
-	PENJEMPUTAN("Penjemputan"),
-	PENGANTARAN("Pengantaran");
+	AVAILABLE("Available"),
+	ASSIGNED("Assigned"),
+	IN_TRANSIT("In Transit");
 
 	private final String label;
 

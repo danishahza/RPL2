@@ -1,6 +1,5 @@
 package com.fleetflow.service;
 
-import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -53,6 +52,14 @@ public class MasterDataService {
 
 	public String namaProduk(String id) {
 		return dao.namaProduk(id);
+	}
+
+	public String namaDriver(String id) {
+		return dao.namaDriver(id);
+	}
+
+	public String alamatPelanggan(String id) {
+		return dao.alamatPelanggan(id);
 	}
 
 	public void tambahKota(String nama) {
@@ -121,21 +128,35 @@ public class MasterDataService {
 		return dao.deliveryOrder();
 	}
 
-	public void tambahDeliveryOrder(String kotaAsalId, String pengirimId, String kotaTujuanId, String penerimaId,
-			LocalDate tanggalDo, LocalDate tanggalPickup, LocalDate tanggalTenggat, String produkId,
-			double beratTon) {
-		dao.tambahDeliveryOrder(kotaAsalId, pengirimId, kotaTujuanId, penerimaId, tanggalDo, tanggalPickup,
-				tanggalTenggat, produkId, beratTon);
+	public List<DeliveryOrder> deliveryOrderAktif() {
+		return dao.deliveryOrderAktif();
 	}
 
-	public void ubahDeliveryOrder(String id, String kotaAsalId, String pengirimId, String kotaTujuanId,
-			String penerimaId, LocalDate tanggalDo, LocalDate tanggalPickup, LocalDate tanggalTenggat,
-			String produkId, double beratTon) {
-		dao.ubahDeliveryOrder(id, kotaAsalId, pengirimId, kotaTujuanId, penerimaId, tanggalDo, tanggalPickup,
-				tanggalTenggat, produkId, beratTon);
+	public void tambahDeliveryOrder(DeliveryOrder deliveryOrder) {
+		dao.tambahDeliveryOrder(deliveryOrder);
+	}
+
+	public void ubahDeliveryOrder(DeliveryOrder deliveryOrder) {
+		dao.ubahDeliveryOrder(deliveryOrder);
 	}
 
 	public void hapusDeliveryOrder(String id) {
 		dao.hapusDeliveryOrder(id);
+	}
+
+	public void tugaskanDriver(String deliveryOrderId, String driverId) {
+		dao.tugaskanDriver(deliveryOrderId, driverId);
+	}
+
+	public void mulaiPerjalanan(String deliveryOrderId) {
+		dao.mulaiPerjalanan(deliveryOrderId);
+	}
+
+	public void selesaikanPengiriman(String deliveryOrderId) {
+		dao.selesaikanPengiriman(deliveryOrderId);
+	}
+
+	public void selesaikanDeliveryOrder(String deliveryOrderId) {
+		dao.selesaikanDeliveryOrder(deliveryOrderId);
 	}
 }

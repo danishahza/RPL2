@@ -60,6 +60,10 @@ public abstract class CrudPanel<T> extends JPanel {
 
 	protected abstract void hapusData(T item);
 
+	protected TabelPanel tabelPanel() {
+		return tabel;
+	}
+
 	private List<String[]> barisTampilan() {
 		return daftar().stream().map(this::baris).toList();
 	}
